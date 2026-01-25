@@ -1,0 +1,138 @@
+
+groupe de discussion pour les inscrits 
+
+
+
+-Une fois inscrit a un evenement, lorsque je vais dans mon profil je peux cliquer dans mes evenements a venir et jai acces a une discussion selon mon covoiturage/before et after (ca on peut le faire plus tard)
+lien potentiel vers l'agenda google a linscription a un evenement qui te le met direct dans ton agenda 
+
+
+
+jai une autre idée de que je dois implémenter. 
+Ma mere veut la possibilité de créer des idées de voyages 
+genre un weekend ou quoi (en france). 
+Par exemple elle crée un weekend a la rochelle pour un couple:
+Dans les ventes de billets, elle a la possibilité d'y mettre plusieurs options (un peu comme les billets davion):
+-Option eco : la elle met ce qui est inclus : ex AirBnB simple etc, et le reste a organiser une fois la bas --> 50 euros
+-flex : AirBnB + une activité le samedi aprem
+- standard : hotel plus journée payée activité
+- VIP : Belle suite d'hotel, activités etc ++
+
+Le tout flexible pour que ma mere decide de quoi inclu quoi (avec pas forcément toujours 4 options disponibles, elle les ajoute delle meme et elle choisit leur prix)
+
+En gros ce serait de créer comme un compte admin pour faire ce genre de weekend/voyage etc en choissant le lieu, les activités, la date etc selon le billet choisis etc
+Et faudrait voir ou je met ces voyages dans mon front end --> peut etre en parallele de mes evenements ? En mode je choisis si je veux voir les prochains voyages ou bien les prochains evenements 
+
+
+1. UI de la barre de navigation améliorée 🎨
+Labels visibles ("Accueil", "Events", "Carte", "Profil")
+Icônes animées (plus grandes quand actives)
+Shadow et élévation
+Hauteur augmentée pour meilleure visibilité
+
+
+trouver une maniere quon voit sur quole logo on est 
+
+aller sur voyage direct quand je clique sur laccuieil voyages a venir 
+
+evenements populaires pis 
+
+
+voir le nombre devenement par pin avec le nombre devenements (petite bulle en haut du pin)
+
+changer le logo de levenement (calendrier ?) voir messenger
+et changer le logo de la carte pour une petite epingle rouge comme sur mes locations
+
+voir mes distinctions de couleurs de bleu (les 3 carrés) fond, carré moyen, petit carré decriture 
+
+
+------------------------------------
+
+probleme backend je ne vois pas les events que jai rejoins et le compte na pas augmenté, par compte je vois un evenement rejoins mais juste pas dans mes evenements a venir 
+
+
+evenements :
+blancs les cases et mettre chaque categories dune couleur 
+6 cats : 6 couleurs : (6 max non negociable --> 5 + divers)
+Culture: Gris ecriture blanc
+nature (nombre ????): vert ecriture blanche
+Restaurants:bleu roi ecriture blanc
+Festivals: jaune ecriture noire
+//Soiree ?: Rouge ecr blanc
+Bien etre : mauve ecr blanc/noire
+Divers: orange ecr blanc
+
+on sattend a quel pourcentage devent par cat
+Avis Gaelle : festival >>>>> Soiree
+
++icones uniformes, que ce soit detaillé ou nons, tous du meme style (pas trop de details quand meme --> maison = le + détaillé)
+
+verifier ce que les pros mettent etc (pas dutilisateurs qui peuvent poster)
+non negociable
+controler la qualité des bars, des restos, que ca deviennent pas marketplace
+--> aller tester les offres des pros avant de les accepter sur l'app 
++faire tester tes connaissance pour plusieurs opinionSSSSS
+
+
+
+L'encadre des event : blanc
+le bouton en haut a gauche de la couleur de la cat avec ecriture blanche a l'interieur
+
+
+mode sombre :
+Accueil :
+Les chiffres des events/voyages a venir en blanc
+
+
+donner la possibilité aux utilisateurs de mettre des lieux en favoris 
+pour tous les comptes d'abord (phase de lancement)
+voir app : les pepites de france (LPDF)
+
+
+dici un ou deux ans : moins de choses accessibles gratuites
+
+
+on peut pas verifier les befores/afters
+faut quon enleve ce systeme before/after ca demande trop de demande
+
+pour les covoiturages proposer sinon aussi des taxis : taxis independants (numeros de taxis de confiances)
+--> ++ visibilité pour les taxis indés
+
+taxis de confiance pour rentrer au besoin 
+
+
+pros : peut etre plutot 89/mois que 79
+890 année
+
+tres peu de beta testeurs pros (genre 1 ou 2 pour 1 mois ou deux)
+
+utilisateurs vont etre gratuits either way 
+
+laisser les gens en parler a leur entourage ++ 
+Cest le mieux gratuits 
+
+
+images : donner la possibilité de mettre plus que 1 images 
+1 obligatoire min 
+
+pouvoir mettre levent en favoris (si ton truc est plus dispo ca disparait de tes favoris)
+
+
+a tester : Infos pratiques : a voir meme si live ca passe qd mm 
+capacité tarif age min (mais sous format icone )
+xxxx      xxxx  xxxx
+
+
+rajouter dans les details dun event de la catégorie X
+Dans la meme categorie :
+Autres events de la categorie X (de la meme maniere que les events sont affichés dans la page de base des events )
+
+
+
+23 caracteres max pour les titres
+
+
+
+
+
+

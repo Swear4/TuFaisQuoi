@@ -1,0 +1,42 @@
+pour le profil : voila ce que je voudrais : Structure du profil épuré
+Identité légère
+
+Prénom OU surnom (au choix de l'utilisateur)
+Tranche d'âge (ex: 18-25, 26-35, 36-45, 46+)
+Ville
+
+Centres d'intérêt (3 activités)
+
+Format visuel : des icônes/badges cliquables
+L'utilisateur sélectionne exactement 3 activités parmi une liste
+Ces 3 choix servent pour :
+
+Ce que j'aime faire (mes passions)
+Ce que je recherche dans l'appli (mes envies de rencontres)
+Avantages de cette approche
+
+Rapide : création de profil en moins de 2 minutes
+Anti-jugement : pas de photo obligatoire, pas de description à rédiger
+Matching efficace : algorithme basé sur les activités communes
+Pas intimidant : évite le syndrome de la page blanche
+et , en faite au lieu de dire qui je suis habituellement c est capturer l'essence de la personne plutôt que son CV social. Voici des idées originales :
+Option 1 : "Mes amis disent que je suis..."
+
+3 adjectifs à choisir dans une liste stylisée
+Ex: Spontané·e / Curieux·se / Bavard·e / Calme / Drôle / Organisé·e / Rêveur·se
+Visuel : des petits badges/étiquettes qu'on sélectionne
+Option 2 : "Ce qui me fait vibrer"
+
+1 phrase libre MAIS avec une amorce imposée pour guider :
+
+"Ce qui me fait vraiment kiffer c'est..."
+"Je suis la personne qui..."
+"Mon truc à moi c'est..."
+
+
+
+Option 3 : "Mon vibe en 3 emojis"
+
+Simplicité ultime
+Très visuel, ça parle tout de suite
+Ex: 🎸🌿📚 ou 🍕🎮🐶

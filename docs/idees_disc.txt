@@ -1,0 +1,33 @@
+Page Événement (publique)
+
+Informations de l’événement
+
+Liste des inscrits / intéressés
+
+Badge indicateur :
+
+“💬 Discussion (12 participants)”
+
+ou “💬 Rejoindre la discussion”
+
+Bouton d’action :
+
+“Rejoindre la discussion” (visible uniquement pour les inscrits / intéressés)
+
+2. Espace Discussion (privé)
+
+Chat de groupe dédié à l’événement
+
+Accessible uniquement si on clique sur “Rejoindre”
+
+Format messagerie instantanée (comme un groupe WhatsApp / Messenger)
+
+Participants = ceux qui ont fait la démarche d’entrer
+
+Cycle de vie
+
+Discussion créée automatiquement avec l’événement
+
+Reste active jusqu’à J+1 ou J+3 après l’événement
+
+Puis archivée ensuite (visible en lecture seule ?)

@@ -1,0 +1,92 @@
+-- ============================================
+-- GUIDE D'UTILISATION DES SCRIPTS SQL
+-- ============================================
+-- 
+-- ⚠️ IMPORTANT : Comment gérer tes scripts SQL dans Supabase
+-- 
+-- PROBLÈME ACTUEL :
+-- - Tu ré-exécutes les scripts avec des INSERT qui créent des doublons
+-- - Erreur "duplicate key" = tu essaies de créer des users/events qui existent déjà
+-- - Erreur "column attendees does not exist" = colonne renommée en participants_count
+-- 
+-- ============================================
+-- 
+-- SOLUTION 1 : SCRIPTS IDEMPOTENTS (recommandé)
+-- ============================================
+-- Les scripts doivent être exécutables plusieurs fois sans erreur
+-- 
+-- ✅ BON : CREATE TABLE IF NOT EXISTS
+-- ✅ BON : CREATE OR REPLACE FUNCTION
+-- ✅ BON : ALTER TABLE ... ADD COLUMN IF NOT EXISTS
+-- ❌ MAUVAIS : INSERT INTO (sans vérification)
+-- ❌ MAUVAIS : CREATE TABLE (sans IF NOT EXISTS)
+-- 
+-- ============================================
+-- 
+-- SOLUTION 2 : ORDRE D'EXÉCUTION
+-- ============================================
+-- 
+-- 1️⃣ PREMIÈRE FOIS (base vide) :
+--    a) schema.sql (structure des tables)
+--    b) add_participants_count.sql (triggers participants)
+--    c) add_concurrency_safety.sql (fonction register_to_event_safe)
+--    d) add_favorites_system.sql (favoris)
+--    e) fix_security_and_cleanup.sql (RLS + nettoyage)
+--    f) seed.sql (données de test) - SEULEMENT SI BASE VIDE
+-- 
+-- 2️⃣ MISES À JOUR (base existante) :
+--    - Exécuter UNIQUEMENT les nouveaux scripts
+--    - NE PAS ré-exécuter seed.sql si tu as déjà des données
+-- 
+-- ============================================
+-- 
+-- SOLUTION 3 : SCRIPT "FULL RESET" (DANGER)
+-- ============================================
+-- Si tu veux TOUT réinitialiser (PERTE DE DONNÉES) :
+-- 
+
+-- DÉCOMMENTER POUR SUPPRIMER TOUTES LES TABLES :
+-- DROP TABLE IF EXISTS carpool_passengers CASCADE;
+-- DROP TABLE IF EXISTS carpools CASCADE;
+-- DROP TABLE IF EXISTS event_favorites CASCADE;
+-- DROP TABLE IF EXISTS event_registrations CASCADE;
+-- DROP TABLE IF EXISTS trip_bookings CASCADE;
+-- DROP TABLE IF EXISTS trip_options CASCADE;
+-- DROP TABLE IF EXISTS trips CASCADE;
+-- DROP TABLE IF EXISTS events CASCADE;
+-- DROP TABLE IF EXISTS users CASCADE;
+-- DROP MATERIALIZED VIEW IF EXISTS event_stats CASCADE;
+-- DROP VIEW IF EXISTS slow_queries CASCADE;
+
+-- Puis exécuter dans l'ordre :
+-- 1. schema.sql
+-- 2. add_participants_count.sql
+-- 3. add_concurrency_safety.sql
+-- 4. add_favorites_system.sql
+-- 5. fix_security_and_cleanup.sql
+-- 6. seed.sql
+
+-- ============================================
+-- 
+-- SOLUTION 4 : SCRIPT SEED IDEMPOTENT
+-- ============================================
+-- Remplacer les INSERT par des INSERT ... ON CONFLICT DO NOTHING
+-- 
+
+-- Exemple :
+-- INSERT INTO users (id, email, name) 
+-- VALUES ('11111111-1111-1111-1111-111111111111', 'test@test.com', 'Test')
+-- ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- 
+-- RECOMMANDATION POUR TON PROJET :
+-- ============================================
+-- 
+-- 1. NE PAS ré-exécuter seed.sql si tu as déjà des données
+-- 2. Exécuter UNIQUEMENT fix_security_and_cleanup.sql maintenant
+-- 3. Pour les futures mises à jour : créer de nouveaux scripts avec IF NOT EXISTS
+-- 
+-- ============================================
+
+SELECT 'Lis ce fichier pour comprendre comment gérer tes scripts SQL' as message;
