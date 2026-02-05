@@ -1,16 +1,23 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
-
-const { width } = Dimensions.get('window');
 
 export default function WelcomeScreen({ navigation }: any) {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const extraBottomPadding = Platform.OS === 'web' ? 90 : 24;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.primary }]} edges={['top', 'bottom']}>
-      <View style={styles.content}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: extraBottomPadding + insets.bottom },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.emoji}>🎉</Text>
           <Text style={styles.title}>EventHub</Text>
@@ -49,7 +56,7 @@ export default function WelcomeScreen({ navigation }: any) {
             <Text style={styles.secondaryButtonText}>Se connecter</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -61,6 +68,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 24,
+    flexGrow: 1,
     justifyContent: 'space-between',
   },
   header: {
