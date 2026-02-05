@@ -40,17 +40,14 @@ export default function WelcomeScreen({ navigation }: any) {
         <View style={styles.buttons}>
           <TouchableOpacity 
             style={[styles.primaryButton, { backgroundColor: '#FFFFFF' }]}
-            onPress={() => navigation.navigate('Signup')}
-          >
-            <Text style={[styles.primaryButtonText, { color: colors.primary }]}>S'inscrire</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.secondaryButton, { borderColor: '#FFFFFF' }]}
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={styles.secondaryButtonText}>Se connecter</Text>
+            <Text style={[styles.primaryButtonText, { color: colors.primary }]}>Se connecter</Text>
           </TouchableOpacity>
+
+          <Text style={styles.demoNote}>
+            Inscription temporairement désactivée (version démo)
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -112,6 +109,12 @@ const styles = StyleSheet.create({
   buttons: {
     marginTop: 24,
   },
+  demoNote: {
+    marginTop: 12,
+    textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 13,
+  },
   primaryButton: {
     borderRadius: 12,
     padding: 18,
@@ -119,18 +122,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  secondaryButton: {
-    borderRadius: 12,
-    padding: 18,
-    alignItems: 'center',
-    borderWidth: 2,
-    backgroundColor: 'transparent',
-  },
-  secondaryButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },

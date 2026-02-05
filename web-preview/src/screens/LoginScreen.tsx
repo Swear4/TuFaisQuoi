@@ -97,12 +97,9 @@ export default function LoginScreen({ navigation }: any) {
             </TouchableOpacity>
 
             <View style={styles.signupContainer}>
-              <Text style={[styles.signupText, { color: colors.textSecondary }]}>
-                Pas encore de compte ?{' '}
-              </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                <Text style={[styles.signupLink, { color: colors.primary }]}>S'inscrire</Text>
-              </TouchableOpacity>
+                <Text style={[styles.signupText, { color: colors.textSecondary, textAlign: 'center' }]}>
+                  Inscription désactivée sur la version démo.
+                </Text>
             </View>
           </View>
         </ScrollView>
