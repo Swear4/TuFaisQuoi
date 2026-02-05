@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    
+    <!-- SEO -->
+    <title>Events App - Application d'événements Pays de Retz</title>
+    <meta name="description" content="Découvrez et participez aux événements du Pays de Retz. Application interactive de gestion d'événements." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Events App - Application d'événements" />
+    <meta property="og:description" content="Découvrez et participez aux événements du Pays de Retz" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Events App - Application d'événements" />
+    <meta property="twitter:description" content="Découvrez et participez aux événements du Pays de Retz" />
+    
+    <!-- PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#6366f1" />
+
+    <!-- Leaflet (web map) -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background-color: #ffffff;
+        overflow: hidden;
+      }
+      
+      #root {
+        height: 100%;
+      }
+      
+      /* Splash screen */
+      .splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      
+      .splash-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      .splash-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        animation: bounce 2s infinite;
+      }
+      
+      .splash-title {
+        color: white;
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      
+      .splash-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 16px;
+        margin-bottom: 40px;
+      }
+      
+      .splash-loader {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+      }
+      
+      /* Hide splash when app is loaded */
+      .app-loaded .splash-screen {
+        display: none;
+      }
+    </style>
+  </head>
+  
+  <body>
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        <h1>JavaScript requis</h1>
+        <p>Cette application nécessite JavaScript pour fonctionner.</p>
+        <p>Veuillez activer JavaScript dans votre navigateur.</p>
+      </div>
+    </noscript>
+    
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splash">
+      <div class="splash-icon">🎉</div>
+      <div class="splash-title">Events App</div>
+      <div class="splash-subtitle">Chargement de l'application...</div>
+      <div class="splash-loader"></div>
+    </div>
+    
+    <!-- App Root -->
+    <div id="root"></div>
+    
+    <script>
+      // Hide splash when app is loaded
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var splash = document.getElementById('splash');
+          if (splash) {
+            splash.classList.add('hidden');
+            setTimeout(function() {
+              document.body.classList.add('app-loaded');
+            }, 300);
+          }
+        }, 500);
+      });
+    </script>
+  </body>
+</html>
