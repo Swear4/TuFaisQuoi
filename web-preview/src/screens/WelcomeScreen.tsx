@@ -6,7 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 export default function WelcomeScreen({ navigation }: any) {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const extraBottomPadding = Platform.OS === 'web' ? 90 : 24;
+  const extraBottomPadding = Platform.OS === 'web' ? 140 : 24;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.primary }]} edges={['top', 'bottom']}>
@@ -34,10 +34,6 @@ export default function WelcomeScreen({ navigation }: any) {
           <View style={styles.featureItem}>
             <Text style={styles.featureEmoji}>🚗</Text>
             <Text style={styles.featureText}>Organisez des covoiturages</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureEmoji}>✨</Text>
-            <Text style={styles.featureText}>Créez vos propres événements</Text>
           </View>
         </View>
 
@@ -69,7 +65,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     flexGrow: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   header: {
     marginTop: 60,
@@ -114,7 +110,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttons: {
-    marginBottom: 20,
+    marginTop: 24,
   },
   primaryButton: {
     borderRadius: 12,
