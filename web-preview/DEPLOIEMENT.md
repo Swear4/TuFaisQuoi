@@ -35,7 +35,7 @@ git push -u origin main
 3. Configurer le projet :
    - **Framework Preset** : Expo
    - **Root Directory** : `.` (laisser par défaut)
-   - **Build Command** : `npx expo export:web`
+   - **Build Command** : `npx expo export --platform web --output-dir web-build`
    - **Output Directory** : `web-build`
 4. Cliquer "Deploy" 🚀
 

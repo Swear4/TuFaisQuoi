@@ -13,7 +13,7 @@ echo [1/3] Nettoyage...
 if exist web-build rmdir /s /q web-build
 
 echo [2/3] Construction de l'app web...
-call npx expo export:web
+call npx expo export --platform web --output-dir web-build
 
 echo.
 echo [3/3] Terminé !
