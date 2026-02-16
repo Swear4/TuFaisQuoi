@@ -6,12 +6,14 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useEventsByCategory } from '../hooks/useEvents';
 import { useTrips } from '../hooks/useTrips';
 import { getCategoryColor } from '../utils/categoryColors';
+import { getEventCategories, getPrimaryCategory } from '../utils/eventCategories';
 
 export default function EventsScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const initialTab = route?.params?.initialTab || 'events';
   const [activeTab, setActiveTab] = useState<'events' | 'trips'>(initialTab);
-  const [selectedCategory, setSelectedCategory] = useState('tous');
+  const initialCategory = route?.params?.initialCategory || 'tous';
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
   // Fetch events from Supabase
   const { data: events, isLoading: eventsLoading, error: eventsError } = useEventsByCategory(
@@ -138,16 +140,30 @@ export default function EventsScreen({ navigation, route }: any) {
                   onPress={() => navigation.navigate('EventDetail', { event })}
                 >
                   <View style={styles.eventHeader}>
-                    <View style={[
-                      styles.categoryBadge, 
-                      { backgroundColor: getCategoryColor(event.category).backgroundColor }
-                    ]}>
-                      <Text style={[
-                        styles.categoryBadgeText, 
-                        { color: getCategoryColor(event.category).textColor }
-                      ]}>
-                        {event.category}
-                      </Text>
+                    <View style={styles.categoryBadgesRow}>
+                      {(() => {
+                        const categories = getEventCategories(event);
+                        const fallback = [getPrimaryCategory(event)];
+                        const toRender = categories.length ? categories : fallback;
+                        return toRender.map((cat) => (
+                          <View
+                            key={cat}
+                            style={[
+                              styles.categoryBadge,
+                              { backgroundColor: getCategoryColor(cat).backgroundColor },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.categoryBadgeText,
+                                { color: getCategoryColor(cat).textColor },
+                              ]}
+                            >
+                              {cat}
+                            </Text>
+                          </View>
+                        ));
+                      })()}
                     </View>
                     {event.is_premium_only && (
                       <View style={[styles.premiumBadge, { backgroundColor: colors.accent + '20' }]}>
@@ -365,6 +381,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  categoryBadgesRow: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginRight: 10,
   },
   categoryBadge: {
     backgroundColor: Colors.secondary + '20',

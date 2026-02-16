@@ -75,6 +75,16 @@ export function useEventsStats(): UseQueryResult<{ total: number; upcoming: numb
   });
 }
 
+export function useUpcomingCountByCategory(category: string, enabled: boolean = true): UseQueryResult<number, Error> {
+  return useQuery({
+    queryKey: ['events', 'count', 'upcoming', 'category', category],
+    queryFn: () => eventsService.fetchUpcomingCountByCategory(category),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    enabled: !!category && enabled,
+  });
+}
+
 /**
  * Hook pour récupérer les événements auxquels un utilisateur est inscrit
  * @param userId ID de l'utilisateur

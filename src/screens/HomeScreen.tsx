@@ -4,9 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { useTheme } from '../contexts/ThemeContext';
 import CreateEventModal from './CreateEventModal';
-import { usePopularEvents, useEventsStats } from '../hooks/useEvents';
+import { usePopularEvents, useEventsStats, useUpcomingCountByCategory } from '../hooks/useEvents';
 import { useTripsStats } from '../hooks/useTrips';
 import { getCategoryColor } from '../utils/categoryColors';
+import { getEventCategories, getPrimaryCategory } from '../utils/eventCategories';
 
 export default function HomeScreen({ navigation }: any) {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -16,6 +17,8 @@ export default function HomeScreen({ navigation }: any) {
   const { data: popularEvents, isLoading: eventsLoading } = usePopularEvents(3);
   const { data: eventsStats } = useEventsStats();
   const { data: tripsStats } = useTripsStats();
+  const { data: dinnersUpcoming } = useUpcomingCountByCategory('gastronomie');
+  const { data: partiesUpcoming } = useUpcomingCountByCategory('nocturne');
 
   // Formater la date pour affichage
   const formatDate = (dateString: string) => {
@@ -58,12 +61,36 @@ export default function HomeScreen({ navigation }: any) {
           style={[styles.statCard, { backgroundColor: colors.secondary + '30' }]}
           onPress={() => navigation.navigate('Événements', { 
             screen: 'EventsList',
-            params: { initialTab: 'trips' }
+            params: { initialTab: 'newFriends', initialNewFriendsTab: 'trips' }
           })}
         >
           <Text style={[styles.statNumber, { color: colors.primary }]}>{tripsStats?.upcoming || 0}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Voyages à venir</Text>
           <Text style={styles.statIcon}>✈️</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.statCard, { backgroundColor: colors.secondary + '30' }]}
+          onPress={() => navigation.navigate('Événements', { 
+            screen: 'EventsList',
+            params: { initialTab: 'newFriends', initialNewFriendsTab: 'dinners' }
+          })}
+        >
+          <Text style={[styles.statNumber, { color: colors.primary }]}>{dinnersUpcoming || 0}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Dîners à venir</Text>
+          <Text style={styles.statIcon}>🍽️</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.statCard, { backgroundColor: colors.secondary + '30' }]}
+          onPress={() => navigation.navigate('Événements', { 
+            screen: 'EventsList',
+            params: { initialTab: 'newFriends', initialNewFriendsTab: 'parties' }
+          })}
+        >
+          <Text style={[styles.statNumber, { color: colors.primary }]}>{partiesUpcoming || 0}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Soirées à venir</Text>
+          <Text style={styles.statIcon}>🌙</Text>
         </TouchableOpacity>
       </View>
 
@@ -85,16 +112,22 @@ export default function HomeScreen({ navigation }: any) {
               onPress={() => navigation.navigate('EventDetail', { event })}
             >
               <View style={styles.eventInfo}>
-                <View style={[
-                  styles.categoryBadge,
-                  { backgroundColor: getCategoryColor(event.category).backgroundColor }
-                ]}>
-                  <Text style={[
-                    styles.categoryBadgeText,
-                    { color: getCategoryColor(event.category).textColor }
-                  ]}>
-                    {event.category}
-                  </Text>
+                <View style={styles.categoryBadgesRow}>
+                  {(() => {
+                    const categories = getEventCategories(event);
+                    const fallback = [getPrimaryCategory(event)];
+                    const toRender = categories.length ? categories : fallback;
+                    return toRender.map((cat) => (
+                      <View
+                        key={cat}
+                        style={[styles.categoryBadge, { backgroundColor: getCategoryColor(cat).backgroundColor }]}
+                      >
+                        <Text style={[styles.categoryBadgeText, { color: getCategoryColor(cat).textColor }]}>
+                          {cat}
+                        </Text>
+                      </View>
+                    ));
+                  })()}
                 </View>
                 <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>{event.title}</Text>
                 <Text style={[styles.eventDate, { color: colors.textSecondary }]}>{formatDate(event.date)}</Text>
@@ -161,11 +194,12 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     padding: 16,
     gap: 12,
   },
   statCard: {
-    flex: 1,
+    width: '48%',
     backgroundColor: Colors.secondary + '30',
     padding: 20,
     borderRadius: 16,
@@ -216,6 +250,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  categoryBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 8,
   },
   categoryBadgeText: {

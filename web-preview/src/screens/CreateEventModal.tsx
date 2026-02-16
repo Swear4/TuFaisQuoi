@@ -57,7 +57,8 @@ export default function CreateEventModal({ visible, onClose, onSuccess }: Create
 
       const eventPayload = {
         title: data.title.slice(0, 100), // Limiter à 100 caractères
-        category: data.categories[0] as EventCategory, // Utiliser la première catégorie pour la DB
+        category: data.categories[0] as EventCategory, // Back-compat / filtres simples
+        categories: data.categories as EventCategory[], // 1-3 catégories
         date: dateTime.toISOString(),
         location: data.location, // Adresse affichée
         latitude: cityCoordinates.lat, // Coordonnées de la ville

@@ -7,13 +7,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as eventsService from '../services/eventsService';
 import { supabase } from '../lib/supabase';
 import { useCarpoolsByEvent, useJoinCarpool, useLeaveCarpool, useCreateCarpool, useIsUserInCarpool } from '../hooks/useCarpools';
+import { useCarpoolRequestsByEvent, useCreateCarpoolRequest, useInvitationsForUser, useCreateCarpoolInvitation, useRespondToCarpoolInvitation, useMarkRequestMatched } from '../hooks/useCarpoolRequests';
+import { getEventCategories, getPrimaryCategory } from '../utils/eventCategories';
 
 export default function EventDetailScreen({ route, navigation }: any) {
   const { event: eventParam } = route.params;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'details' | 'covoiturage'>('details');
+  const [carpoolTab, setCarpoolTab] = useState<'search' | 'offer'>('search');
   const [showCreateCarpoolModal, setShowCreateCarpoolModal] = useState(false);
+  const [requestForm, setRequestForm] = useState({
+    departure_location: '',
+    departure_time: '',
+    seats_needed: '1',
+    notes: '',
+  });
   const [carpoolForm, setCarpoolForm] = useState({
     departure_location: '',
     departure_time: '',
@@ -210,6 +219,136 @@ export default function EventDetailScreen({ route, navigation }: any) {
     );
   };
 
+  const createRequestMutation = useCreateCarpoolRequest();
+  const createInvitationMutation = useCreateCarpoolInvitation();
+  const respondInvitationMutation = useRespondToCarpoolInvitation();
+  const markRequestMatchedMutation = useMarkRequestMatched();
+
+  const handleCreateCarpoolRequest = () => {
+    if (!user) {
+      Alert.alert('Connexion requise', 'Vous devez être connecté');
+      return;
+    }
+
+    if (!isRegistered) {
+      Alert.alert('Inscription requise', 'Vous devez être inscrit à l\'événement pour demander une place');
+      return;
+    }
+
+    if (!event) return;
+
+    if (!requestForm.departure_location || !requestForm.departure_time) {
+      Alert.alert('Champs requis', 'Veuillez remplir le lieu de départ et l\'heure');
+      return;
+    }
+
+    const seatsNeeded = Math.max(1, parseInt(requestForm.seats_needed || '1'));
+
+    const eventDate = new Date(event.date);
+    const [hours, minutes] = requestForm.departure_time.split(':');
+    eventDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    createRequestMutation.mutate(
+      {
+        event_id: event.id,
+        requester_id: user.id,
+        departure_location: requestForm.departure_location,
+        departure_time: eventDate.toISOString(),
+        seats_needed: seatsNeeded,
+        notes: requestForm.notes || undefined,
+      },
+      {
+        onSuccess: () => {
+          Alert.alert('Demande publiée', 'Votre demande de place est maintenant visible.');
+          setRequestForm({ departure_location: '', departure_time: '', seats_needed: '1', notes: '' });
+        },
+        onError: (error: any) => Alert.alert('Erreur', error.message),
+      }
+    );
+  };
+
+  const handleInviteRequester = (requestId: string, toUserId: string) => {
+    if (!user) {
+      Alert.alert('Connexion requise', 'Vous devez être connecté');
+      return;
+    }
+    if (!event) return;
+
+    const myCarpools = (carpools || []).filter((c) => c.driver_id === user.id);
+    if (myCarpools.length === 0) {
+      Alert.alert('Créer une annonce', 'Créez d\'abord un covoiturage (onglet Proposer) pour envoyer une invitation.');
+      return;
+    }
+
+    const sendInvite = (carpoolId: string) => {
+      createInvitationMutation.mutate(
+        {
+          event_id: event.id,
+          carpool_id: carpoolId,
+          request_id: requestId,
+          from_user_id: user.id,
+          to_user_id: toUserId,
+        },
+        {
+          onSuccess: () => Alert.alert('Invitation envoyée', 'La personne pourra accepter ou refuser.'),
+          onError: (error: any) => Alert.alert('Erreur', error.message),
+        }
+      );
+    };
+
+    if (myCarpools.length === 1) {
+      sendInvite(myCarpools[0].id);
+      return;
+    }
+
+    Alert.alert(
+      'Choisir un covoiturage',
+      'Avec quel covoiturage voulez-vous inviter ? ',
+      [
+        ...myCarpools.slice(0, 3).map((c) => {
+          const time = new Date(c.departure_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          return {
+            text: `${c.departure_location} • ${time}`,
+            onPress: () => sendInvite(c.id),
+          } as any;
+        }),
+        { text: 'Annuler', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleRespondInvitation = async (invitation: any, status: 'accepted' | 'declined') => {
+    if (!user) {
+      Alert.alert('Connexion requise', 'Vous devez être connecté');
+      return;
+    }
+
+    if (status === 'accepted') {
+      joinCarpoolMutation.mutate(
+        { carpoolId: invitation.carpool_id, userId: user.id },
+        {
+          onSuccess: () => {
+            respondInvitationMutation.mutate({ invitationId: invitation.id, status: 'accepted' });
+            if (invitation.request_id) {
+              markRequestMatchedMutation.mutate({ requestId: invitation.request_id });
+            }
+            Alert.alert('Bienvenue !', 'Vous avez rejoint le covoiturage.');
+          },
+          onError: (error: any) => Alert.alert('Erreur', error.message),
+        }
+      );
+      return;
+    }
+
+    respondInvitationMutation.mutate(
+      { invitationId: invitation.id, status: 'declined' },
+      {
+        onSuccess: () => Alert.alert('Refusé', 'Invitation refusée.'),
+        onError: (error: any) => Alert.alert('Erreur', error.message),
+      }
+    );
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -228,6 +367,8 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   // Récupérer les covoiturages depuis Supabase
   const { data: carpools, isLoading: carpoolsLoading } = useCarpoolsByEvent(event?.id || null);
+  const { data: carpoolRequests, isLoading: requestsLoading } = useCarpoolRequestsByEvent(event?.id || null);
+  const { data: pendingInvitations, isLoading: invitationsLoading } = useInvitationsForUser(event?.id || null, user?.id || null);
   const joinCarpoolMutation = useJoinCarpool();
   const leaveCarpoolMutation = useLeaveCarpool();
   const createCarpoolMutation = useCreateCarpool();
@@ -261,9 +402,16 @@ export default function EventDetailScreen({ route, navigation }: any) {
         {/* Event Header */}
         <View style={styles.content}>
           <View style={styles.headerBadges}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{event.category}</Text>
-            </View>
+            {(() => {
+              const categories = getEventCategories(event);
+              const fallback = [getPrimaryCategory(event)];
+              const toRender = categories.length ? categories : fallback;
+              return toRender.map((cat) => (
+                <View key={cat} style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{cat}</Text>
+                </View>
+              ));
+            })()}
             {event.isPremium && (
               <View style={styles.premiumBadge}>
                 <Text style={styles.premiumBadgeText}>⭐ Premium</Text>
@@ -384,80 +532,221 @@ export default function EventDetailScreen({ route, navigation }: any) {
             </View>
           ) : activeTab === 'covoiturage' ? (
             <View style={styles.tabContent}>
-              <Text style={styles.sectionTitle}>Covoiturages disponibles</Text>
-              {carpoolsLoading ? (
-                <ActivityIndicator color={Colors.primary} style={{ marginVertical: 20 }} />
-              ) : carpools && carpools.length > 0 ? (
-                carpools.map((carpool) => {
-                  const departureTime = new Date(carpool.departure_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                  const isDriver = user && carpool.driver_id === user.id;
-                  
-                  return (
-                    <View key={carpool.id} style={styles.carpoolCard}>
-                      <View style={styles.carpoolHeader}>
-                        <View style={styles.carpoolAvatar}>
-                          <Text style={styles.carpoolAvatarText}>
-                            {carpool.driver_name ? carpool.driver_name[0].toUpperCase() : 'C'}
-                          </Text>
-                        </View>
-                        <View style={styles.carpoolInfo}>
-                          <Text style={styles.carpoolDriverName}>
-                            {carpool.driver_name || 'Conducteur'}
-                            {isDriver && ' (Vous)'}
-                          </Text>
-                          <Text style={styles.carpoolDetail}>
-                            📍 {carpool.departure_location} • 🕐 {departureTime}
-                          </Text>
-                          <Text style={styles.carpoolSeats}>
-                            💺 {carpool.available_seats} / {carpool.total_seats} places disponibles
-                          </Text>
-                          {carpool.notes && (
-                            <Text style={styles.carpoolNotes}>📝 {carpool.notes}</Text>
-                          )}
-                        </View>
-                        {carpool.price_per_seat === 0 ? (
-                          <View style={styles.freeBadge}>
-                            <Text style={styles.freeBadgeText}>Gratuit</Text>
-                          </View>
-                        ) : (
-                          <View style={styles.priceBadge}>
-                            <Text style={styles.priceBadgeText}>{carpool.price_per_seat}€</Text>
-                          </View>
-                        )}
-                      </View>
-                      {!isDriver && (
-                        <TouchableOpacity 
-                          style={[styles.carpoolRequestButton, carpool.available_seats === 0 && styles.carpoolRequestButtonDisabled]}
-                          onPress={() => handleJoinCarpool(carpool.id, carpool.available_seats)}
-                          disabled={carpool.available_seats === 0 || joinCarpoolMutation.isPending}
-                        >
-                          {joinCarpoolMutation.isPending ? (
-                            <ActivityIndicator color="#FFFFFF" size="small" />
-                          ) : (
-                            <Text style={styles.carpoolRequestButtonText}>
-                              {carpool.available_seats === 0 ? 'Complet' : 'Demander une place'}
-                            </Text>
-                          )}
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  );
-                })
-              ) : (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>
-                    Aucun covoiturage proposé pour le moment.
-                  </Text>
-                </View>
-              )}
-
-              {isRegistered && (
-                <TouchableOpacity 
-                  style={styles.createCarpoolButton}
-                  onPress={() => setShowCreateCarpoolModal(true)}
+              <View style={styles.carpoolTabsContainer}>
+                <TouchableOpacity
+                  style={[styles.carpoolTab, carpoolTab === 'search' && styles.carpoolTabActive]}
+                  onPress={() => setCarpoolTab('search')}
                 >
-                  <Text style={styles.createCarpoolButtonText}>+ Proposer un covoiturage</Text>
+                  <Text style={[styles.carpoolTabText, carpoolTab === 'search' && styles.carpoolTabTextActive]}>
+                    Rechercher
+                  </Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.carpoolTab, carpoolTab === 'offer' && styles.carpoolTabActive]}
+                  onPress={() => setCarpoolTab('offer')}
+                >
+                  <Text style={[styles.carpoolTabText, carpoolTab === 'offer' && styles.carpoolTabTextActive]}>
+                    Proposer
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {carpoolTab === 'search' ? (
+                <>
+                  <Text style={styles.sectionTitle}>Covoiturages disponibles</Text>
+                  {carpoolsLoading ? (
+                    <ActivityIndicator color={Colors.primary} style={{ marginVertical: 20 }} />
+                  ) : carpools && carpools.length > 0 ? (
+                    carpools.map((carpool) => {
+                      const departureTime = new Date(carpool.departure_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                      const isDriver = user && carpool.driver_id === user.id;
+                      
+                      return (
+                        <View key={carpool.id} style={styles.carpoolCard}>
+                          <View style={styles.carpoolHeader}>
+                            <View style={styles.carpoolAvatar}>
+                              <Text style={styles.carpoolAvatarText}>
+                                {carpool.driver_name ? carpool.driver_name[0].toUpperCase() : 'C'}
+                              </Text>
+                            </View>
+                            <View style={styles.carpoolInfo}>
+                              <Text style={styles.carpoolDriverName}>
+                                {carpool.driver_name || 'Conducteur'}
+                                {isDriver && ' (Vous)'}
+                              </Text>
+                              <Text style={styles.carpoolDetail}>
+                                📍 {carpool.departure_location} • 🕐 {departureTime}
+                              </Text>
+                              <Text style={styles.carpoolSeats}>
+                                💺 {carpool.available_seats} / {carpool.total_seats} places disponibles
+                              </Text>
+                              {carpool.notes && (
+                                <Text style={styles.carpoolNotes}>📝 {carpool.notes}</Text>
+                              )}
+                            </View>
+                            {carpool.price_per_seat === 0 ? (
+                              <View style={styles.freeBadge}>
+                                <Text style={styles.freeBadgeText}>Gratuit</Text>
+                              </View>
+                            ) : (
+                              <View style={styles.priceBadge}>
+                                <Text style={styles.priceBadgeText}>{carpool.price_per_seat}€</Text>
+                              </View>
+                            )}
+                          </View>
+                          {!isDriver && (
+                            <TouchableOpacity 
+                              style={[styles.carpoolRequestButton, carpool.available_seats === 0 && styles.carpoolRequestButtonDisabled]}
+                              onPress={() => handleJoinCarpool(carpool.id, carpool.available_seats)}
+                              disabled={carpool.available_seats === 0 || joinCarpoolMutation.isPending}
+                            >
+                              {joinCarpoolMutation.isPending ? (
+                                <ActivityIndicator color="#FFFFFF" size="small" />
+                              ) : (
+                                <Text style={styles.carpoolRequestButtonText}>
+                                  {carpool.available_seats === 0 ? 'Complet' : 'Demander une place'}
+                                </Text>
+                              )}
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>
+                        Aucun covoiturage proposé pour le moment.
+                      </Text>
+                    </View>
+                  )}
+
+                  <Text style={styles.sectionTitle}>Invitations reçues</Text>
+                  {invitationsLoading ? (
+                    <ActivityIndicator color={Colors.primary} style={{ marginVertical: 10 }} />
+                  ) : pendingInvitations && pendingInvitations.length > 0 ? (
+                    pendingInvitations.map((inv) => (
+                      <View key={inv.id} style={styles.requestCard}>
+                        <Text style={styles.requestTitle}>🚗 Invitation de {inv.from_user_name || 'un conducteur'}</Text>
+                        <View style={styles.requestActions}>
+                          <TouchableOpacity
+                            style={[styles.inviteButton, styles.acceptButton]}
+                            onPress={() => handleRespondInvitation(inv as any, 'accepted')}
+                            disabled={respondInvitationMutation.isPending || joinCarpoolMutation.isPending}
+                          >
+                            <Text style={styles.inviteButtonText}>Accepter</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.inviteButton, styles.declineButton]}
+                            onPress={() => handleRespondInvitation(inv as any, 'declined')}
+                            disabled={respondInvitationMutation.isPending}
+                          >
+                            <Text style={styles.inviteButtonText}>Refuser</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>Aucune invitation pour le moment.</Text>
+                    </View>
+                  )}
+
+                  <Text style={styles.sectionTitle}>Demander des places</Text>
+                  <View style={styles.requestFormCard}>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="Lieu de départ"
+                      placeholderTextColor={Colors.textSecondary}
+                      value={requestForm.departure_location}
+                      onChangeText={(t) => setRequestForm((p) => ({ ...p, departure_location: t }))}
+                    />
+                    <View style={styles.formRow}>
+                      <TextInput
+                        style={[styles.modalInput, styles.halfInput]}
+                        placeholder="Heure (HH:MM)"
+                        placeholderTextColor={Colors.textSecondary}
+                        value={requestForm.departure_time}
+                        onChangeText={(t) => setRequestForm((p) => ({ ...p, departure_time: t }))}
+                      />
+                      <TextInput
+                        style={[styles.modalInput, styles.halfInput]}
+                        placeholder="Places"
+                        placeholderTextColor={Colors.textSecondary}
+                        keyboardType="numeric"
+                        value={requestForm.seats_needed}
+                        onChangeText={(t) => setRequestForm((p) => ({ ...p, seats_needed: t }))}
+                      />
+                    </View>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="Note (optionnel)"
+                      placeholderTextColor={Colors.textSecondary}
+                      value={requestForm.notes}
+                      onChangeText={(t) => setRequestForm((p) => ({ ...p, notes: t }))}
+                    />
+                    <TouchableOpacity
+                      style={styles.publishRequestButton}
+                      onPress={handleCreateCarpoolRequest}
+                      disabled={createRequestMutation.isPending}
+                    >
+                      {createRequestMutation.isPending ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <Text style={styles.publishRequestButtonText}>Publier ma demande</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.sectionTitle}>Proposer un covoiturage</Text>
+                  <TouchableOpacity 
+                    style={styles.createCarpoolButton}
+                    onPress={() => {
+                      if (!isRegistered) {
+                        Alert.alert('Inscription requise', 'Vous devez être inscrit à l\'événement pour proposer un covoiturage');
+                        return;
+                      }
+                      setShowCreateCarpoolModal(true);
+                    }}
+                  >
+                    <Text style={styles.createCarpoolButtonText}>+ Créer une annonce</Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.sectionTitle}>Demandes en attente</Text>
+                  {requestsLoading ? (
+                    <ActivityIndicator color={Colors.primary} style={{ marginVertical: 10 }} />
+                  ) : carpoolRequests && carpoolRequests.length > 0 ? (
+                    carpoolRequests.map((req) => {
+                      const time = new Date(req.departure_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                      const isMine = user && req.requester_id === user.id;
+                      return (
+                        <View key={req.id} style={styles.requestCard}>
+                          <Text style={styles.requestTitle}>🙋 {req.requester_name || 'Participant'} {isMine && '(Vous)'}</Text>
+                          <Text style={styles.requestDetail}>📍 {req.departure_location} • 🕐 {time} • 💺 {req.seats_needed}</Text>
+                          {req.notes ? <Text style={styles.requestDetail}>📝 {req.notes}</Text> : null}
+                          {!isMine && (
+                            <TouchableOpacity
+                              style={styles.inviteButton}
+                              onPress={() => handleInviteRequester(req.id, req.requester_id)}
+                              disabled={createInvitationMutation.isPending}
+                            >
+                              {createInvitationMutation.isPending ? (
+                                <ActivityIndicator color="#FFFFFF" size="small" />
+                              ) : (
+                                <Text style={styles.inviteButtonText}>Inviter</Text>
+                              )}
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>Aucune demande pour le moment.</Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
           ) : null}
@@ -819,6 +1108,95 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     marginBottom: 100,
+  },
+  carpoolTabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+  },
+  carpoolTab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  carpoolTabActive: {
+    backgroundColor: Colors.primary,
+  },
+  carpoolTabText: {
+    color: Colors.textSecondary,
+    fontWeight: '700',
+  },
+  carpoolTabTextActive: {
+    color: '#FFFFFF',
+  },
+  requestFormCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  halfInput: {
+    flex: 1,
+  },
+  publishRequestButton: {
+    backgroundColor: Colors.secondary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  publishRequestButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  requestCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+  },
+  requestTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  requestDetail: {
+    color: Colors.textSecondary,
+    marginBottom: 6,
+  },
+  requestActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  inviteButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  inviteButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: Colors.success,
+    marginTop: 0,
+  },
+  declineButton: {
+    flex: 1,
+    backgroundColor: Colors.warning,
+    marginTop: 0,
   },
   description: {
     fontSize: 16,

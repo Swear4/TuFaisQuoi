@@ -6,16 +6,40 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useEventsByCategory } from '../hooks/useEvents';
 import { useTrips } from '../hooks/useTrips';
 import { getCategoryColor } from '../utils/categoryColors';
+import { getEventCategories, getPrimaryCategory } from '../utils/eventCategories';
 
 export default function EventsScreen({ navigation, route }: any) {
   const { colors } = useTheme();
-  const initialTab = route?.params?.initialTab || 'events';
-  const [activeTab, setActiveTab] = useState<'events' | 'trips'>(initialTab);
+  const initialTabParam: string = route?.params?.initialTab || 'events';
+  const initialActiveTab: 'events' | 'newFriends' =
+    initialTabParam === 'newFriends' || initialTabParam === 'trips' ? 'newFriends' : 'events';
+  const initialNewFriendsTabParam: string | undefined = route?.params?.initialNewFriendsTab;
+
+  const [activeTab, setActiveTab] = useState<'events' | 'newFriends'>(
+    initialActiveTab === 'events' ? 'events' : 'newFriends'
+  );
+  const [newFriendsTab, setNewFriendsTab] = useState<'dinners' | 'parties' | 'trips'>(() => {
+    if (initialTabParam === 'trips') return 'trips';
+    if (initialNewFriendsTabParam === 'trips') return 'trips';
+    if (initialNewFriendsTabParam === 'parties') return 'parties';
+    return 'dinners';
+  });
   const [selectedCategory, setSelectedCategory] = useState('tous');
+
+  const categoryForQuery =
+    activeTab === 'events'
+      ? (selectedCategory === 'tous' ? null : selectedCategory)
+      : newFriendsTab === 'dinners'
+        ? 'gastronomie'
+        : newFriendsTab === 'parties'
+          ? 'nocturne'
+          : null;
+  const shouldFetchEvents = activeTab === 'events' || newFriendsTab !== 'trips';
 
   // Fetch events from Supabase
   const { data: events, isLoading: eventsLoading, error: eventsError } = useEventsByCategory(
-    selectedCategory === 'tous' ? null : selectedCategory
+    categoryForQuery,
+    shouldFetchEvents
   );
 
   // Fetch trips from Supabase
@@ -59,13 +83,13 @@ export default function EventsScreen({ navigation, route }: any) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <Text style={styles.title}>{activeTab === 'events' ? 'Événements' : 'Voyages'}</Text>
+        <Text style={styles.title}>{activeTab === 'events' ? 'Événements' : 'Nouveaux potes'}</Text>
         <Text style={styles.subtitle}>
-          {activeTab === 'events' ? 'Trouvez votre prochaine aventure' : 'Découvrez nos weekends organisés'}
+          {activeTab === 'events' ? 'Trouvez votre prochaine aventure' : 'Rencontres + voyages en groupe'}
         </Text>
       </View>
 
-      {/* Tabs Événements / Voyages */}
+      {/* Tabs Événements / Nouveaux potes */}
       <View style={[styles.mainTabsContainer, { backgroundColor: colors.card }]}>
         <TouchableOpacity 
           style={[styles.mainTab, activeTab === 'events' && { backgroundColor: colors.primary }]}
@@ -76,11 +100,11 @@ export default function EventsScreen({ navigation, route }: any) {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.mainTab, activeTab === 'trips' && { backgroundColor: colors.primary }]}
-          onPress={() => setActiveTab('trips')}
+          style={[styles.mainTab, activeTab === 'newFriends' && { backgroundColor: colors.primary }]}
+          onPress={() => setActiveTab('newFriends')}
         >
-          <Text style={[styles.mainTabText, { color: colors.textSecondary }, activeTab === 'trips' && { color: '#FFFFFF' }]}>
-            ✈️ Voyages
+          <Text style={[styles.mainTabText, { color: colors.textSecondary }, activeTab === 'newFriends' && { color: '#FFFFFF' }]}>
+            🤝 Nouveaux potes
           </Text>
         </TouchableOpacity>
       </View>
@@ -138,16 +162,22 @@ export default function EventsScreen({ navigation, route }: any) {
                   onPress={() => navigation.navigate('EventDetail', { event })}
                 >
                   <View style={styles.eventHeader}>
-                    <View style={[
-                      styles.categoryBadge, 
-                      { backgroundColor: getCategoryColor(event.category).backgroundColor }
-                    ]}>
-                      <Text style={[
-                        styles.categoryBadgeText, 
-                        { color: getCategoryColor(event.category).textColor }
-                      ]}>
-                        {event.category}
-                      </Text>
+                    <View style={styles.categoryBadgesRow}>
+                      {(() => {
+                        const categories = getEventCategories(event);
+                        const fallback = [getPrimaryCategory(event)];
+                        const toRender = categories.length ? categories : fallback;
+                        return toRender.map((cat) => (
+                          <View
+                            key={cat}
+                            style={[styles.categoryBadge, { backgroundColor: getCategoryColor(cat).backgroundColor }]}
+                          >
+                            <Text style={[styles.categoryBadgeText, { color: getCategoryColor(cat).textColor }]}>
+                              {cat}
+                            </Text>
+                          </View>
+                        ));
+                      })()}
                     </View>
                     {event.is_premium_only && (
                       <View style={[styles.premiumBadge, { backgroundColor: colors.accent + '20' }]}>
@@ -192,69 +222,165 @@ export default function EventsScreen({ navigation, route }: any) {
       </>
       )}
 
-      {activeTab === 'trips' && (
-        <ScrollView style={styles.eventsContainer}>
-          {tripsLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement des voyages...</Text>
-            </View>
-          ) : tripsError ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorEmoji}>😕</Text>
-              <Text style={[styles.errorText, { color: colors.text }]}>Impossible de charger les voyages</Text>
-              <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>{tripsError.message}</Text>
-            </View>
-          ) : !trips || trips.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>✈️</Text>
-              <Text style={[styles.emptyText, { color: colors.text }]}>Aucun voyage disponible</Text>
-              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Revenez bientôt !</Text>
-            </View>
-          ) : (
-            trips.map((trip) => (
-              <TouchableOpacity 
-                key={trip.id}
-                style={[styles.tripCard, { backgroundColor: colors.secondary + '20' }]}
-                onPress={() => {/* TODO: Navigation vers détails du voyage */}}
-              >
-                <View style={styles.tripHeader}>
-                  <View style={styles.tripImageContainer}>
-                    {trip.image_url ? (
-                      <Image 
-                        source={{ uri: trip.image_url }} 
-                        style={styles.tripImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={styles.tripImagePlaceholder}>
-                        <Text style={styles.tripImageEmoji}>🏖️</Text>
+      {activeTab === 'newFriends' && (
+        <>
+          <View style={[styles.newFriendsTabsContainer, { backgroundColor: colors.card }]}>
+            <TouchableOpacity
+              style={[styles.newFriendsTab, newFriendsTab === 'dinners' && { backgroundColor: colors.primary }]}
+              onPress={() => setNewFriendsTab('dinners')}
+            >
+              <Text style={[styles.newFriendsTabText, { color: colors.textSecondary }, newFriendsTab === 'dinners' && { color: '#FFFFFF' }]}>
+                🍽️ Dîners
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.newFriendsTab, newFriendsTab === 'parties' && { backgroundColor: colors.primary }]}
+              onPress={() => setNewFriendsTab('parties')}
+            >
+              <Text style={[styles.newFriendsTabText, { color: colors.textSecondary }, newFriendsTab === 'parties' && { color: '#FFFFFF' }]}>
+                🌙 Soirées
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.newFriendsTab, newFriendsTab === 'trips' && { backgroundColor: colors.primary }]}
+              onPress={() => setNewFriendsTab('trips')}
+            >
+              <Text style={[styles.newFriendsTabText, { color: colors.textSecondary }, newFriendsTab === 'trips' && { color: '#FFFFFF' }]}>
+                ✈️ Voyages
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {(newFriendsTab === 'dinners' || newFriendsTab === 'parties') && (
+            <ScrollView style={styles.eventsContainer}>
+              {eventsLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
+                </View>
+              ) : eventsError ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorEmoji}>😕</Text>
+                  <Text style={[styles.errorText, { color: colors.text }]}>Impossible de charger</Text>
+                  <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>{eventsError.message}</Text>
+                </View>
+              ) : !events || events.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyEmoji}>🔍</Text>
+                  <Text style={[styles.emptyText, { color: colors.text }]}>Aucun événement trouvé</Text>
+                  <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Revenez bientôt !</Text>
+                </View>
+              ) : (
+                events.map((event) => (
+                  <TouchableOpacity 
+                    key={event.id} 
+                    style={styles.eventCard}
+                    onPress={() => navigation.navigate('EventDetail', { event })}
+                  >
+                    <View style={styles.eventHeader}>
+                      <View style={[
+                        styles.categoryBadge, 
+                        { backgroundColor: getCategoryColor(event.category).backgroundColor }
+                      ]}>
+                        <Text style={[
+                          styles.categoryBadgeText, 
+                          { color: getCategoryColor(event.category).textColor }
+                        ]}>
+                          {newFriendsTab === 'dinners'
+                            ? 'DINER NOUVEAUX POTES'
+                            : 'SOIREE NOUVEAUX POTES'}
+                        </Text>
                       </View>
-                    )}
-                  </View>
-                  <View style={styles.tripMainInfo}>
-                    <Text style={[styles.tripTitle, { color: colors.text }]} numberOfLines={2}>{trip.title}</Text>
-                    <Text style={[styles.tripDate, { color: colors.textSecondary }]}>📅 {formatTripDates(trip.start_date, trip.end_date)}</Text>
-                    <Text style={[styles.tripLocation, { color: colors.textSecondary }]}>📍 {trip.location}</Text>
-                    <Text style={[styles.tripDuration, { color: colors.textSecondary }]}>⏱️ {trip.duration}</Text>
-                  </View>
-                </View>
-
-                <View style={[styles.tripPriceRange, { backgroundColor: colors.primary + '15' }]}>
-                  <Text style={[styles.tripPriceLabel, { color: colors.textSecondary }]}>À partir de</Text>
-                  <Text style={[styles.tripPriceValue, { color: colors.primary }]}>{trip.min_price}€</Text>
-                </View>
-
-                <View style={[styles.tripFooter, { borderTopColor: colors.border }]}>
-                  <Text style={[styles.tripOptionsHint, { color: colors.textSecondary }]}>
-                    {trip.trip_options?.length || 0} options disponibles
-                  </Text>
-                  <Text style={[styles.tripDetailsLink, { color: colors.primary }]}>Voir les détails →</Text>
-                </View>
-              </TouchableOpacity>
-            ))
+                      {event.is_premium_only && (
+                        <View style={[styles.premiumBadge, { backgroundColor: colors.accent + '20' }]}>
+                          <Text style={[styles.premiumBadgeText, { color: colors.accent }]}>⭐ Premium</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>{event.title}</Text>
+                    <Text style={[styles.eventDate, { color: colors.textSecondary }]}>{formatDate(event.date)}</Text>
+                    <Text style={[styles.eventLocation, { color: colors.textSecondary }]} numberOfLines={1}>📍 {event.location}</Text>
+                    <View style={styles.capacityInfo}>
+                      <Text style={[styles.capacityText, { color: colors.textSecondary }]}>
+                        {event.participants_count || 0} / {event.capacity || '∞'} participants
+                      </Text>
+                      {event.capacity && event.participants_count >= event.capacity && (
+                        <View style={styles.fullBadge}>
+                          <Text style={styles.fullBadgeText}>COMPLET</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
           )}
-        </ScrollView>
+
+          {newFriendsTab === 'trips' && (
+            <ScrollView style={styles.eventsContainer}>
+              {tripsLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement des voyages...</Text>
+                </View>
+              ) : tripsError ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorEmoji}>😕</Text>
+                  <Text style={[styles.errorText, { color: colors.text }]}>Impossible de charger les voyages</Text>
+                  <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>{tripsError.message}</Text>
+                </View>
+              ) : !trips || trips.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyEmoji}>✈️</Text>
+                  <Text style={[styles.emptyText, { color: colors.text }]}>Aucun voyage disponible</Text>
+                  <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Revenez bientôt !</Text>
+                </View>
+              ) : (
+                trips.map((trip) => (
+                  <TouchableOpacity 
+                    key={trip.id}
+                    style={[styles.tripCard, { backgroundColor: colors.secondary + '20' }]}
+                    onPress={() => {/* TODO: Navigation vers détails du voyage */}}
+                  >
+                    <View style={styles.tripHeader}>
+                      <View style={styles.tripImageContainer}>
+                        {trip.image_url ? (
+                          <Image 
+                            source={{ uri: trip.image_url }} 
+                            style={styles.tripImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.tripImagePlaceholder}>
+                            <Text style={styles.tripImageEmoji}>🏖️</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.tripMainInfo}>
+                        <Text style={[styles.tripTitle, { color: colors.text }]} numberOfLines={2}>{trip.title}</Text>
+                        <Text style={[styles.tripDate, { color: colors.textSecondary }]}>📅 {formatTripDates(trip.start_date, trip.end_date)}</Text>
+                        <Text style={[styles.tripLocation, { color: colors.textSecondary }]}>📍 {trip.location}</Text>
+                        <Text style={[styles.tripDuration, { color: colors.textSecondary }]}>⏱️ {trip.duration}</Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.tripPriceRange, { backgroundColor: colors.primary + '15' }]}>
+                      <Text style={[styles.tripPriceLabel, { color: colors.textSecondary }]}>À partir de</Text>
+                      <Text style={[styles.tripPriceValue, { color: colors.primary }]}>{trip.min_price}€</Text>
+                    </View>
+
+                    <View style={[styles.tripFooter, { borderTopColor: colors.border }]}>
+                      <Text style={[styles.tripOptionsHint, { color: colors.textSecondary }]}>
+                        {trip.trip_options?.length || 0} options disponibles
+                      </Text>
+                      <Text style={[styles.tripDetailsLink, { color: colors.primary }]}>Voir les détails →</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          )}
+        </>
       )}
     </SafeAreaView>
   );
@@ -314,6 +440,26 @@ const styles = StyleSheet.create({
   mainTabTextActive: {
     color: '#FFFFFF',
   },
+  newFriendsTabsContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 4,
+  },
+  newFriendsTab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newFriendsTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
   categoriesContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -365,6 +511,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  categoryBadgesRow: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginRight: 10,
   },
   categoryBadge: {
     backgroundColor: Colors.secondary + '20',

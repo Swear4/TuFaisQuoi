@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.events (
   description TEXT,
   date TIMESTAMPTZ NOT NULL,
   location TEXT NOT NULL,
+  categories TEXT[],
   category TEXT NOT NULL CHECK (category IN ('culturel', 'concert', 'sport', 'nature', 'gastronomie', 'festival', 'nocturne', 'famille', 'bien-etre', 'shopping')),
   capacity INTEGER NOT NULL CHECK (capacity > 0),
   attendees INTEGER DEFAULT 0 CHECK (attendees >= 0 AND attendees <= capacity),
@@ -41,6 +42,11 @@ CREATE TABLE IF NOT EXISTS public.events (
 -- Index couvrant CRITIQUE pour performance (category + date)
 CREATE INDEX IF NOT EXISTS idx_events_category_date ON public.events(category, date DESC) 
   INCLUDE (title, location, capacity, attendees, image_url, is_premium_only);
+
+-- Index for multi-category filtering
+CREATE INDEX IF NOT EXISTS idx_events_categories_gin
+  ON public.events
+  USING GIN (categories);
 
 -- Index sur date pour tri rapide
 CREATE INDEX IF NOT EXISTS idx_events_date ON public.events(date DESC);

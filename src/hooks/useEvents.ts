@@ -19,12 +19,16 @@ export function useEvents(): UseQueryResult<Event[], Error> {
  * Hook pour récupérer les événements par catégorie
  * @param category Catégorie à filtrer (null = tous)
  */
-export function useEventsByCategory(category: string | null): UseQueryResult<Event[], Error> {
+export function useEventsByCategory(
+  category: string | null,
+  enabled: boolean = true
+): UseQueryResult<Event[], Error> {
   return useQuery({
     queryKey: ['events', 'category', category],
     queryFn: () => category ? eventsService.fetchEventsByCategory(category) : eventsService.fetchEvents(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    enabled,
   });
 }
 
@@ -72,6 +76,19 @@ export function useEventsStats(): UseQueryResult<{ total: number; upcoming: numb
     queryFn: () => eventsService.fetchEventsStats(),
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook pour récupérer le nombre d'événements à venir par catégorie
+ */
+export function useUpcomingCountByCategory(category: string, enabled: boolean = true): UseQueryResult<number, Error> {
+  return useQuery({
+    queryKey: ['events', 'count', 'upcoming', 'category', category],
+    queryFn: () => eventsService.fetchUpcomingCountByCategory(category),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    enabled: !!category && enabled,
   });
 }
 

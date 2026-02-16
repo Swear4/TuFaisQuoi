@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as eventsService from '../services/eventsService';
 import { supabase } from '../lib/supabase';
 import { useCarpoolsByEvent, useJoinCarpool, useLeaveCarpool, useCreateCarpool, useIsUserInCarpool } from '../hooks/useCarpools';
+import { getEventCategories, getPrimaryCategory } from '../utils/eventCategories';
 
 export default function EventDetailScreen({ route, navigation }: any) {
   const { event: eventParam } = route.params;
@@ -261,9 +262,16 @@ export default function EventDetailScreen({ route, navigation }: any) {
         {/* Event Header */}
         <View style={styles.content}>
           <View style={styles.headerBadges}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{event.category}</Text>
-            </View>
+            {(() => {
+              const categories = getEventCategories(event);
+              const fallback = [getPrimaryCategory(event)];
+              const toRender = categories.length ? categories : fallback;
+              return toRender.map((cat) => (
+                <View key={cat} style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{cat}</Text>
+                </View>
+              ));
+            })()}
             {event.isPremium && (
               <View style={styles.premiumBadge}>
                 <Text style={styles.premiumBadgeText}>⭐ Premium</Text>
@@ -451,14 +459,18 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 </View>
               )}
 
-              {isRegistered && (
-                <TouchableOpacity 
-                  style={styles.createCarpoolButton}
-                  onPress={() => setShowCreateCarpoolModal(true)}
-                >
-                  <Text style={styles.createCarpoolButtonText}>+ Proposer un covoiturage</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity 
+                style={styles.createCarpoolButton}
+                onPress={() => {
+                  if (!isRegistered) {
+                    Alert.alert('Inscription requise', 'Vous devez être inscrit à l\'événement pour proposer un covoiturage');
+                    return;
+                  }
+                  setShowCreateCarpoolModal(true);
+                }}
+              >
+                <Text style={styles.createCarpoolButtonText}>+ Proposer un covoiturage</Text>
+              </TouchableOpacity>
             </View>
           ) : null}
         </View>

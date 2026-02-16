@@ -23,6 +23,7 @@ export interface Event {
   favorites_count: number;
   image_url: string | null;
   category: EventCategory;
+  categories?: EventCategory[] | null;
   is_premium_only: boolean;
   is_hidden: boolean;
   organizer_id: string | null;

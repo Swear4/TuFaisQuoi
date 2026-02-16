@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -22,6 +22,16 @@ export default function CreateEventModal({ visible, onClose, onSuccess }: Create
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
+  const isWeb = Platform.OS === 'web';
+  const DateTimePicker = useMemo(() => {
+    if (isWeb) return null;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('@react-native-community/datetimepicker').default as any;
+  }, [isWeb]);
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pickerDate, setPickerDate] = useState<Date>(new Date());
   const [eventData, setEventData] = useState({
     title: '',
     categories: [] as string[], // Maintenant un tableau de 1-3 catégories
@@ -34,6 +44,50 @@ export default function CreateEventModal({ visible, onClose, onSuccess }: Create
     imageUri: '',
   });
   const [cityCoordinates, setCityCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+
+  const formatDateFR = (date: Date) => {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(date.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const formatTimeFR = (date: Date) => {
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${hh}:${min}`;
+  };
+
+  const buildDateFromForm = () => {
+    const base = new Date();
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(eventData.date)) {
+      const [day, month, year] = eventData.date.split('/').map((v) => parseInt(v, 10));
+      if (year && month && day) base.setFullYear(year, month - 1, day);
+    }
+    if (/^\d{2}:\d{2}$/.test(eventData.time)) {
+      const [hours, minutes] = eventData.time.split(':').map((v) => parseInt(v, 10));
+      if (!Number.isNaN(hours) && !Number.isNaN(minutes)) base.setHours(hours, minutes, 0, 0);
+    } else {
+      base.setSeconds(0, 0);
+    }
+    return base;
+  };
+
+  const openCalendar = () => {
+    if (isWeb || !DateTimePicker) return;
+    const initial = buildDateFromForm();
+    setPickerDate(initial);
+    setShowTimePicker(false);
+    setShowDatePicker(true);
+  };
+
+  const openClock = () => {
+    if (isWeb || !DateTimePicker) return;
+    const initial = buildDateFromForm();
+    setPickerDate(initial);
+    setShowDatePicker(false);
+    setShowTimePicker(true);
+  };
 
   // Mutation pour créer l'événement
   const createEventMutation = useMutation({
@@ -57,7 +111,8 @@ export default function CreateEventModal({ visible, onClose, onSuccess }: Create
 
       const eventPayload = {
         title: data.title.slice(0, 100), // Limiter à 100 caractères
-        category: data.categories[0] as EventCategory, // Utiliser la première catégorie pour la DB
+        category: data.categories[0] as EventCategory, // Back-compat / filtres simples
+        categories: data.categories as EventCategory[], // 1-3 catégories
         date: dateTime.toISOString(),
         location: data.location, // Adresse affichée
         latitude: cityCoordinates.lat, // Coordonnées de la ville
@@ -258,11 +313,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess }: Create
               />
 
               <Text style={[styles.label, { color: isDark ? colors.text : Colors.text }]}>Catégories * (1 à 3)</Text>
-              <ScrollView 
-                style={styles.categoriesScrollContainer}
-                contentContainerStyle={styles.categoriesGrid}
-                showsVerticalScrollIndicator={true}
-              >
+              <View style={styles.categoriesGrid}>
                 {categories.map((cat) => {
                   const isSelected = eventData.categories.includes(cat.id);
                   const selectionIndex = eventData.categories.indexOf(cat.id);
@@ -313,7 +364,7 @@ export default function CreateEventModal({ visible, onClose, onSuccess }: Create
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </View>
             </View>
           )}
 
@@ -322,22 +373,94 @@ export default function CreateEventModal({ visible, onClose, onSuccess }: Create
               <Text style={[styles.stepTitle, { color: isDark ? colors.text : Colors.text }]}>Date et lieu</Text>
               
               <Text style={[styles.label, { color: isDark ? colors.text : Colors.text }]}>Date *</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: isDark ? colors.card : '#FFFFFF', borderColor: isDark ? colors.border : '#E5E7EB', color: isDark ? colors.text : Colors.text }]}
-                placeholder="JJ/MM/AAAA"
-                value={eventData.date}
-                onChangeText={(text) => setEventData({ ...eventData, date: text })}
-                placeholderTextColor={isDark ? colors.textSecondary : Colors.textSecondary}
-              />
+              {isWeb ? (
+                <TextInput
+                  style={[styles.input, { backgroundColor: isDark ? colors.card : '#FFFFFF', borderColor: isDark ? colors.border : '#E5E7EB', color: isDark ? colors.text : Colors.text }]}
+                  placeholder="JJ/MM/AAAA"
+                  value={eventData.date}
+                  onChangeText={(text) => setEventData({ ...eventData, date: text })}
+                  placeholderTextColor={isDark ? colors.textSecondary : Colors.textSecondary}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={[styles.pickerField, { backgroundColor: isDark ? colors.card : '#FFFFFF', borderColor: isDark ? colors.border : '#E5E7EB' }]}
+                  onPress={openCalendar}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.pickerValue, { color: eventData.date ? (isDark ? colors.text : Colors.text) : (isDark ? colors.textSecondary : Colors.textSecondary) }]}>
+                    {eventData.date || 'JJ/MM/AAAA'}
+                  </Text>
+                  <Text style={[styles.pickerIcon, { color: isDark ? colors.textSecondary : Colors.textSecondary }]}>📅</Text>
+                </TouchableOpacity>
+              )}
 
               <Text style={[styles.label, { color: isDark ? colors.text : Colors.text }]}>Heure *</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: isDark ? colors.card : '#FFFFFF', borderColor: isDark ? colors.border : '#E5E7EB', color: isDark ? colors.text : Colors.text }]}
-                placeholder="HH:MM"
-                value={eventData.time}
-                onChangeText={(text) => setEventData({ ...eventData, time: text })}
-                placeholderTextColor={isDark ? colors.textSecondary : Colors.textSecondary}
-              />
+              {isWeb ? (
+                <TextInput
+                  style={[styles.input, { backgroundColor: isDark ? colors.card : '#FFFFFF', borderColor: isDark ? colors.border : '#E5E7EB', color: isDark ? colors.text : Colors.text }]}
+                  placeholder="HH:MM"
+                  value={eventData.time}
+                  onChangeText={(text) => setEventData({ ...eventData, time: text })}
+                  placeholderTextColor={isDark ? colors.textSecondary : Colors.textSecondary}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={[styles.pickerField, { backgroundColor: isDark ? colors.card : '#FFFFFF', borderColor: isDark ? colors.border : '#E5E7EB' }]}
+                  onPress={openClock}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.pickerValue, { color: eventData.time ? (isDark ? colors.text : Colors.text) : (isDark ? colors.textSecondary : Colors.textSecondary) }]}>
+                    {eventData.time || 'HH:MM'}
+                  </Text>
+                  <Text style={[styles.pickerIcon, { color: isDark ? colors.textSecondary : Colors.textSecondary }]}>🕒</Text>
+                </TouchableOpacity>
+              )}
+
+              {!isWeb && DateTimePicker && showDatePicker && (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  themeVariant={isDark ? 'dark' : 'light'}
+                  textColor={Platform.OS === 'ios' ? (isDark ? colors.text : Colors.text) : undefined}
+                  onChange={(e: any, selected?: Date) => {
+                    if (Platform.OS !== 'ios' && e?.type === 'dismissed') {
+                      setShowDatePicker(false);
+                      return;
+                    }
+                    const next = selected || pickerDate;
+                    setPickerDate(next);
+                    setEventData((prev) => ({ ...prev, date: formatDateFR(next) }));
+
+                    if (Platform.OS !== 'ios') {
+                      setShowDatePicker(false);
+                      setShowTimePicker(true);
+                    }
+                  }}
+                />
+              )}
+              {!isWeb && DateTimePicker && showTimePicker && (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant={isDark ? 'dark' : 'light'}
+                  textColor={Platform.OS === 'ios' ? (isDark ? colors.text : Colors.text) : undefined}
+                  onChange={(e: any, selected?: Date) => {
+                    if (Platform.OS !== 'ios' && e?.type === 'dismissed') {
+                      setShowTimePicker(false);
+                      return;
+                    }
+                    const next = selected || pickerDate;
+                    setPickerDate(next);
+                    setEventData((prev) => ({ ...prev, time: formatTimeFR(next) }));
+
+                    if (Platform.OS !== 'ios') {
+                      setShowTimePicker(false);
+                    }
+                  }}
+                />
+              )}
 
               <Text style={[styles.label, { color: isDark ? colors.text : Colors.text }]}>Adresse de l'événement *</Text>
               <TextInput
@@ -528,6 +651,21 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: Colors.text,
+  },
+  pickerField: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pickerValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pickerIcon: {
+    fontSize: 18,
   },
   addressInput: {
     minHeight: 60,

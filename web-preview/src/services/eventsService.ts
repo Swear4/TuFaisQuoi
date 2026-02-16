@@ -39,19 +39,77 @@ export async function fetchEvents(limit?: number, includeHidden: boolean = false
  * Récupérer les événements par catégorie
  */
 export async function fetchEventsByCategory(category: string) {
+  const nowIso = new Date().toISOString();
+
   const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .contains('categories', [category])
+    .eq('is_hidden', false)
+    .gte('date', nowIso)
+    .order('date', { ascending: true });
+
+  if (!error) {
+    return data as Event[];
+  }
+
+  const looksLikeMissingColumn =
+    typeof error.message === 'string' &&
+    (error.message.toLowerCase().includes('column') || error.message.toLowerCase().includes('categories'));
+
+  if (!looksLikeMissingColumn) {
+    throw new Error(`Erreur lors du chargement des événements: ${error.message}`);
+  }
+
+  const { data: legacyData, error: legacyError } = await supabase
     .from('events')
     .select('*')
     .eq('category', category)
     .eq('is_hidden', false)
-    .gte('date', new Date().toISOString())
+    .gte('date', nowIso)
     .order('date', { ascending: true });
 
-  if (error) {
-    throw new Error(`Erreur lors du chargement des événements: ${error.message}`);
+  if (legacyError) {
+    throw new Error(`Erreur lors du chargement des événements: ${legacyError.message}`);
   }
 
-  return data as Event[];
+  return legacyData as Event[];
+}
+
+export async function fetchUpcomingCountByCategory(category: string) {
+  const nowIso = new Date().toISOString();
+
+  const { count, error } = await supabase
+    .from('events')
+    .select('*', { count: 'exact', head: true })
+    .contains('categories', [category])
+    .eq('is_hidden', false)
+    .gte('date', nowIso);
+
+  if (!error) {
+    return count || 0;
+  }
+
+  const looksLikeMissingColumn =
+    typeof error.message === 'string' &&
+    (error.message.toLowerCase().includes('column') || error.message.toLowerCase().includes('categories'));
+
+  if (!looksLikeMissingColumn) {
+    throw new Error(`Erreur stats: ${error.message}`);
+  }
+
+  const { count: legacyCount, error: legacyError } = await supabase
+    .from('events')
+    .select('*', { count: 'exact', head: true })
+    .eq('category', category)
+    .eq('is_hidden', false)
+    .gte('date', nowIso);
+
+  if (legacyError) {
+    throw new Error(`Erreur stats: ${legacyError.message}`);
+  }
+
+  return legacyCount || 0;
 }
 
 /**
